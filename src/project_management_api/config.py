@@ -8,6 +8,21 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = True
 
+    db_host: str = "localhost"
+    db_port: int = 3306
+    db_user: str = "root"
+    db_password: str = ""
+    db_name: str = "master"
+
+    @property
+    def database_url(self) -> str:
+        """Constructs MySQL SQLAlchemy connection URI."""
+        return (
+            f"mysql+pymysql://{self.db_user}:{self.db_password}@"
+            f"{self.db_host}:{self.db_port}/{self.db_name}"
+        )
+
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
