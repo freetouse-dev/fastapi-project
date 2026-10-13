@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     db_port: int = 3306
     db_user: str = "root"
     db_password: str = ""
-    db_name: str = "master"
+    db_name: str = "project_management"
 
     @property
     def database_url(self) -> str:
