@@ -67,3 +67,21 @@ def get_workspace_membership(db: Session, workspace_id: int, user_id: int) -> Wo
         )
         .first()
     )
+
+def get_workspace_members(db: Session, workspace_id: int) -> list[WorkspaceMember]:
+    """Returns all members of a workspace."""
+    return db.query(WorkspaceMember).filter(WorkspaceMember.workspace_id == workspace_id).all()
+
+def add_workspace_member(
+    db: Session, workspace_id: int, user_id: int, role: WorkspaceRole = WorkspaceRole.MEMBER
+) -> WorkspaceMember:
+    """Adds a user to a workspace with the specified role."""
+    membership = WorkspaceMember(
+        workspace_id=workspace_id,
+        user_id=user_id,
+        role=role,
+    )
+    db.add(membership)
+    db.commit()
+    db.refresh(membership)
+    return membership

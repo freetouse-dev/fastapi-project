@@ -13,10 +13,10 @@ app = FastAPI(
 
 app.include_router(api_router, prefix="/api/v1")
 
-@app.get("/", summary="Root Welcome")
-def read_root():
-    return {
-        "message": f"Welcome to the {settings.app_name}",
-        "environment": settings.environment,
-        "docs": "/docs",
-    }
+# @app.get("/", summary="Root Welcome")
+# def read_root():
+#     return {
+#         "message": f"Welcome to the {settings.app_name}",
+#         "environment": settings.environment,
+#         "docs": "/docs",
+#     }
