@@ -1,6 +1,7 @@
 import re
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, EmailStr
+
 from project_management_api.models.workspace import WorkspaceRole
 from project_management_api.schemas.user import UserResponse
 
@@ -30,6 +31,10 @@ class WorkspaceResponse(WorkspaceBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+class WorkspaceMemberAdd(BaseModel):
+    email: EmailStr
+    role: WorkspaceRole = WorkspaceRole.MEMBER
+
 class WorkspaceMemberResponse(BaseModel):
     id: int
     workspace_id: int
@@ -39,7 +44,3 @@ class WorkspaceMemberResponse(BaseModel):
     user: UserResponse
 
     model_config = ConfigDict(from_attributes=True)
-
-class WorkspaceMemberAdd(BaseModel):
-    email: EmailStr
-    role: WorkspaceRole = WorkspaceRole.MEMBER

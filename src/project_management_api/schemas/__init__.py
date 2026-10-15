@@ -5,8 +5,16 @@ from project_management_api.schemas.workspace import (
     WorkspaceCreate,
     WorkspaceMemberResponse,
     WorkspaceResponse,
-    WorkspaceUpdate,
     WorkspaceMemberAdd,
+    WorkspaceUpdate,
+)
+from project_management_api.schemas.project import (
+    ProjectBase,
+    ProjectCreate,
+    ProjectMemberAdd,
+    ProjectMemberResponse,
+    ProjectResponse,
+    ProjectUpdate,
 )
 
 __all__ = [
@@ -22,4 +30,10 @@ __all__ = [
     "WorkspaceUpdate",
     "WorkspaceMemberResponse",
     "WorkspaceMemberAdd",
+    "ProjectBase",
+    "ProjectCreate",
+    "ProjectResponse",
+    "ProjectUpdate",
+    "ProjectMemberAdd",
+    "ProjectMemberResponse",
 ]
