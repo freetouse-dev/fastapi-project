@@ -1,4 +1,13 @@
 from project_management_api.schemas.activity import TaskActivityResponse
+from project_management_api.schemas.auth import (
+    AuthMessageResponse,
+    ForgotPasswordRequest,
+    ResendOTPRequest,
+    ResetPasswordRequest,
+    VerifyEmailRequest,
+    VerifyResetOTPRequest,
+    VerifyResetOTPResponse,
+)
 from project_management_api.schemas.comment import (
     CommentBase,
     CommentCreate,
@@ -57,4 +66,11 @@ __all__ = [
     "TaskActivityResponse",
     "PaginatedResponse",
     "ProjectDashboardResponse",
+    "VerifyEmailRequest",
+    "ResendOTPRequest",
+    "ForgotPasswordRequest",
+    "VerifyResetOTPRequest",
+    "VerifyResetOTPResponse",
+    "ResetPasswordRequest",
+    "AuthMessageResponse",
 ]

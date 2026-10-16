@@ -27,6 +27,18 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     cors_origins: list[str] = ["*"]
 
+    # Email & OTP Configuration
+    smtp_host: str = "localhost"
+    smtp_port: int = 1025
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_tls: bool = False
+    emails_from_email: str = "noreply@projectapi.com"
+    emails_from_name: str = "Project Management API"
+    otp_expire_minutes: int = 10
+    otp_max_attempts: int = 5
+    password_reset_token_expire_minutes: int = 15
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
