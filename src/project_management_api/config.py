@@ -28,12 +28,12 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["*"]
 
     # Email & OTP Configuration
-    smtp_host: str = "localhost"
-    smtp_port: int = 1025
-    smtp_user: str = ""
-    smtp_password: str = ""
-    smtp_tls: bool = False
-    emails_from_email: str = "noreply@projectapi.com"
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: str = "gingergin348@gmail.com"
+    smtp_password: str = "rwpr xkch skvl bvad"
+    smtp_tls: bool = True
+    emails_from_email: str = "gingergin348@gmail.com"
     emails_from_name: str = "Project Management API"
     otp_expire_minutes: int = 10
     otp_max_attempts: int = 5

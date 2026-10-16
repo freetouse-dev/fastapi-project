@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -18,7 +18,10 @@ from project_management_api.schemas.auth import (
 )
 from project_management_api.schemas.token import Token
 from project_management_api.schemas.user import UserCreate, UserResponse
-from project_management_api.services.email import send_verification_email
+from project_management_api.services.email import (
+    send_password_reset_email,
+    send_verification_email,
+)
 
 router = APIRouter()
 
@@ -29,8 +32,12 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     summary="Register a new user and initiate email verification",
 )
-def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
-    """Registers a new user in unverified state and sends an email verification OTP."""
+def register_user(
+    user_in: UserCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """Registers a new user in unverified state and sends an email verification OTP in the background."""
     existing_user = crud_user.get_user_by_email(db, email=user_in.email)
     if existing_user:
         raise HTTPException(
@@ -41,11 +48,16 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     # 1. Create user with is_verified=False
     db_user = crud_user.create_user(db, user_in=user_in)
 
-    # 2. Generate and email verification OTP
+    # 2. Generate and email verification OTP asynchronously via background tasks
     _, plain_otp = crud_otp.create_user_otp(
         db, user_id=db_user.id, purpose=OTPPurpose.EMAIL_VERIFICATION
     )
-    send_verification_email(to_email=db_user.email, full_name=db_user.full_name, otp=plain_otp)
+    background_tasks.add_task(
+        send_verification_email,
+        to_email=db_user.email,
+        full_name=db_user.full_name,
+        otp=plain_otp,
+    )
 
     return db_user
 
@@ -95,8 +107,12 @@ def verify_email(payload: VerifyEmailRequest, db: Session = Depends(get_db)):
     response_model=AuthMessageResponse,
     summary="Resend verification OTP",
 )
-def resend_verification_otp(payload: ResendOTPRequest, db: Session = Depends(get_db)):
-    """Invalidates old OTP and issues a fresh verification code."""
+def resend_verification_otp(
+    payload: ResendOTPRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """Invalidates old OTP and issues a fresh verification code dispatched via background tasks."""
     user = crud_user.get_user_by_email(db, email=payload.email)
     if not user:
         # Generic message to avoid email enumeration
@@ -113,7 +129,12 @@ def resend_verification_otp(payload: ResendOTPRequest, db: Session = Depends(get
     _, plain_otp = crud_otp.create_user_otp(
         db, user_id=user.id, purpose=OTPPurpose.EMAIL_VERIFICATION
     )
-    send_verification_email(to_email=user.email, full_name=user.full_name, otp=plain_otp)
+    background_tasks.add_task(
+        send_verification_email,
+        to_email=user.email,
+        full_name=user.full_name,
+        otp=plain_otp,
+    )
 
     return AuthMessageResponse(
         message="A new verification code has been sent to your email."
@@ -160,10 +181,12 @@ def login_for_access_token(
     response_model=AuthMessageResponse,
     summary="Request a password reset OTP",
 )
-def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
-    """Initiates password reset by emailing an OTP. Uses generic response to prevent email enumeration."""
-    from project_management_api.services.email import send_password_reset_email
-
+def forgot_password(
+    payload: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """Initiates password reset by emailing an OTP via background tasks. Uses generic response to prevent email enumeration."""
     generic_response = AuthMessageResponse(
         message="If your email address is registered, a password reset code has been sent."
     )
@@ -172,11 +195,16 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
     if not user or not user.is_active:
         return generic_response
 
-    # Generate and email password reset OTP
+    # Generate and email password reset OTP asynchronously
     _, plain_otp = crud_otp.create_user_otp(
         db, user_id=user.id, purpose=OTPPurpose.PASSWORD_RESET
     )
-    send_password_reset_email(to_email=user.email, full_name=user.full_name, otp=plain_otp)
+    background_tasks.add_task(
+        send_password_reset_email,
+        to_email=user.email,
+        full_name=user.full_name,
+        otp=plain_otp,
+    )
 
     return generic_response
 

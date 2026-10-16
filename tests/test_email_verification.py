@@ -86,3 +86,39 @@ def test_resend_verification_otp(client, db_session):
     )
     assert second_otp.id != first_otp.id
     assert second_otp.is_used is False
+
+
+def test_registration_and_resend_trigger_background_email(client, monkeypatch):
+    """Verifies that registration and OTP resend dispatch emails asynchronously via BackgroundTasks."""
+    sent_emails = []
+
+    def fake_send_verification_email(to_email: str, full_name: str, otp: str):
+        sent_emails.append({"to_email": to_email, "full_name": full_name, "otp": otp})
+        return True
+
+    monkeypatch.setattr(
+        "project_management_api.api.v1.endpoints.auth.send_verification_email",
+        fake_send_verification_email,
+    )
+
+    reg_payload = {
+        "email": "bg_verify@example.com",
+        "full_name": "Background User",
+        "password": "securepassword123",
+    }
+    reg_res = client.post("/api/v1/auth/register", json=reg_payload)
+    assert reg_res.status_code == 201
+    assert len(sent_emails) == 1
+    assert sent_emails[0]["to_email"] == "bg_verify@example.com"
+    assert sent_emails[0]["full_name"] == "Background User"
+    assert len(sent_emails[0]["otp"]) == 6
+
+    # Resend OTP
+    resend_res = client.post(
+        "/api/v1/auth/resend-verification-otp",
+        json={"email": "bg_verify@example.com"},
+    )
+    assert resend_res.status_code == 200
+    assert len(sent_emails) == 2
+    assert sent_emails[1]["to_email"] == "bg_verify@example.com"
+    assert len(sent_emails[1]["otp"]) == 6

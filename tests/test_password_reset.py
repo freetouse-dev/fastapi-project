@@ -105,3 +105,26 @@ def test_reset_password_invalid_token(client):
     )
     assert res.status_code == 400
     assert "Invalid or expired password reset token" in res.json()["detail"]
+
+
+def test_forgot_password_triggers_background_email(client, db_session, monkeypatch):
+    """Verifies that forgot-password dispatches emails asynchronously via BackgroundTasks."""
+    sent_emails = []
+
+    def fake_send_password_reset_email(to_email: str, full_name: str, otp: str):
+        sent_emails.append({"to_email": to_email, "full_name": full_name, "otp": otp})
+        return True
+
+    monkeypatch.setattr(
+        "project_management_api.api.v1.endpoints.auth.send_password_reset_email",
+        fake_send_password_reset_email,
+    )
+
+    email = "bg_reset@example.com"
+    setup_verified_user(client, db_session, email=email)
+
+    forgot_res = client.post("/api/v1/auth/forgot-password", json={"email": email})
+    assert forgot_res.status_code == 200
+    assert len(sent_emails) == 1
+    assert sent_emails[0]["to_email"] == email
+    assert len(sent_emails[0]["otp"]) == 6
