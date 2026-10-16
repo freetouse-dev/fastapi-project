@@ -14,6 +14,7 @@ from project_management_api.schemas.project import (
     ProjectResponse,
     ProjectUpdate,
 )
+from project_management_api.schemas.report import ProjectDashboardResponse
 from project_management_api.schemas.task import TaskBase, TaskCreate, TaskResponse, TaskUpdate
 from project_management_api.schemas.token import Token, TokenPayload
 from project_management_api.schemas.user import UserBase, UserCreate, UserResponse, UserUpdate
@@ -55,4 +56,5 @@ __all__ = [
     "CommentResponse",
     "TaskActivityResponse",
     "PaginatedResponse",
+    "ProjectDashboardResponse",
 ]
