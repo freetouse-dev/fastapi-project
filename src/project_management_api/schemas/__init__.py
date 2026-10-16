@@ -1,13 +1,3 @@
-from project_management_api.schemas.token import Token, TokenPayload
-from project_management_api.schemas.user import UserBase, UserCreate, UserResponse, UserUpdate
-from project_management_api.schemas.workspace import (
-    WorkspaceBase,
-    WorkspaceCreate,
-    WorkspaceMemberResponse,
-    WorkspaceResponse,
-    WorkspaceMemberAdd,
-    WorkspaceUpdate,
-)
 from project_management_api.schemas.project import (
     ProjectBase,
     ProjectCreate,
@@ -15,6 +5,17 @@ from project_management_api.schemas.project import (
     ProjectMemberResponse,
     ProjectResponse,
     ProjectUpdate,
+)
+from project_management_api.schemas.task import TaskBase, TaskCreate, TaskResponse, TaskUpdate
+from project_management_api.schemas.token import Token, TokenPayload
+from project_management_api.schemas.user import UserBase, UserCreate, UserResponse, UserUpdate
+from project_management_api.schemas.workspace import (
+    WorkspaceBase,
+    WorkspaceCreate,
+    WorkspaceMemberAdd,
+    WorkspaceMemberResponse,
+    WorkspaceResponse,
+    WorkspaceUpdate,
 )
 
 __all__ = [
@@ -36,4 +37,8 @@ __all__ = [
     "ProjectUpdate",
     "ProjectMemberAdd",
     "ProjectMemberResponse",
+    "TaskBase",
+    "TaskCreate",
+    "TaskUpdate",
+    "TaskResponse",
 ]

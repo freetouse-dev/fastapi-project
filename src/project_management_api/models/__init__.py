@@ -1,6 +1,7 @@
+from project_management_api.models.project import Project, ProjectMember, ProjectRole, ProjectStatus
+from project_management_api.models.task import Task, TaskPriority, TaskStatus
 from project_management_api.models.user import User
 from project_management_api.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
-from project_management_api.models.project import Project, ProjectMember, ProjectRole, ProjectStatus
 
 __all__ = [
     "User",
@@ -11,4 +12,7 @@ __all__ = [
     "ProjectMember",
     "ProjectRole",
     "ProjectStatus",
+    "Task",
+    "TaskPriority",
+    "TaskStatus",
 ]
