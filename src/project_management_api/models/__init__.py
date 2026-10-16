@@ -1,3 +1,5 @@
+from project_management_api.models.activity import ActivityAction, TaskActivity
+from project_management_api.models.comment import TaskComment
 from project_management_api.models.project import Project, ProjectMember, ProjectRole, ProjectStatus
 from project_management_api.models.task import Task, TaskPriority, TaskStatus
 from project_management_api.models.user import User
@@ -15,4 +17,7 @@ __all__ = [
     "Task",
     "TaskPriority",
     "TaskStatus",
+    "TaskComment",
+    "TaskActivity",
+    "ActivityAction",
 ]

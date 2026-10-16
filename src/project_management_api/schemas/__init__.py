@@ -1,3 +1,10 @@
+from project_management_api.schemas.activity import TaskActivityResponse
+from project_management_api.schemas.comment import (
+    CommentBase,
+    CommentCreate,
+    CommentResponse,
+    CommentUpdate,
+)
 from project_management_api.schemas.project import (
     ProjectBase,
     ProjectCreate,
@@ -41,4 +48,9 @@ __all__ = [
     "TaskCreate",
     "TaskUpdate",
     "TaskResponse",
+    "CommentBase",
+    "CommentCreate",
+    "CommentUpdate",
+    "CommentResponse",
+    "TaskActivityResponse",
 ]

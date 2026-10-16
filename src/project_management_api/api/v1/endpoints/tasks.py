@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from project_management_api.api.deps import get_current_user
 from project_management_api.api.v1.endpoints.workspaces import require_workspace_membership
+from project_management_api.crud import activity as crud_activity
 from project_management_api.crud import project as crud_project
 from project_management_api.crud import task as crud_task
 from project_management_api.crud import user as crud_user
@@ -12,9 +13,11 @@ from project_management_api.models.project import Project, ProjectRole
 from project_management_api.models.task import TaskPriority, TaskStatus
 from project_management_api.models.user import User
 from project_management_api.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
+from project_management_api.schemas.activity import TaskActivityResponse
 from project_management_api.schemas.task import TaskCreate, TaskResponse, TaskUpdate
 
 router = APIRouter()
+
 
 def require_project_context(
     slug: str,
@@ -42,6 +45,7 @@ def require_project_context(
             )
 
     return workspace, ws_membership, project
+
 
 @router.post(
     "/{slug}/projects/{key}/tasks/",
@@ -89,6 +93,7 @@ def create_task(
         assignee_id=assignee_id,
     )
 
+
 @router.get(
     "/{slug}/projects/{key}/tasks/",
     response_model=list[TaskResponse],
@@ -109,6 +114,7 @@ def list_tasks(
         priority=priority,
     )
 
+
 @router.get(
     "/{slug}/projects/{key}/tasks/{task_number}",
     response_model=TaskResponse,
@@ -128,6 +134,7 @@ def get_task(
             detail=f"Task {project.key}-{task_number} not found.",
         )
     return task
+
 
 @router.patch(
     "/{slug}/projects/{key}/tasks/{task_number}",
@@ -174,4 +181,32 @@ def update_task(
             )
         assignee_id = assignee.id
 
-    return crud_task.update_task(db, db_task=task, task_in=task_in, assignee_id=assignee_id)
+    return crud_task.update_task(
+        db,
+        db_task=task,
+        task_in=task_in,
+        actor_id=current_user.id,
+        assignee_id=assignee_id,
+    )
+
+
+@router.get(
+    "/{slug}/projects/{key}/tasks/{task_number}/activities/",
+    response_model=list[TaskActivityResponse],
+    summary="Get task activity history",
+)
+def get_task_activities(
+    task_number: int,
+    context: tuple[Workspace, WorkspaceMember, Project] = Depends(require_project_context),
+    db: Session = Depends(get_db),
+):
+    """Returns the full audit trail of changes made to the task."""
+    _, _, project = context
+    task = crud_task.get_task_by_number(db, project_id=project.id, task_number=task_number)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Task {project.key}-{task_number} not found.",
+        )
+
+    return crud_activity.get_activities_for_task(db, task_id=task.id)
