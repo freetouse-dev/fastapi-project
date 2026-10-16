@@ -16,6 +16,7 @@ from project_management_api.schemas.project import (
     ProjectMemberResponse,
     ProjectResponse,
 )
+from project_management_api.schemas.report import ProjectDashboardResponse
 
 router = APIRouter()
 
@@ -183,3 +184,39 @@ def add_member_to_project(
     return crud_project.add_project_member(
         db, project_id=project.id, user_id=user_to_add.id, role=member_in.role
     )
+
+@router.get(
+    "/{slug}/projects/{key}/dashboard",
+    response_model=ProjectDashboardResponse,
+    summary="Get project dashboard metrics",
+)
+def get_project_dashboard(
+    key: str,
+    context: tuple[Workspace, WorkspaceMember] = Depends(require_workspace_membership),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Calculates summary statistics and progress metrics for a project."""
+    from project_management_api.crud import report as crud_report
+
+    workspace, membership = context
+    project = crud_project.get_project_by_key(db, workspace_id=workspace.id, key=key)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found.",
+        )
+
+    # Permission check: Workspace Admin/Owner or Project Member
+    is_admin_or_owner = membership.role in [WorkspaceRole.OWNER, WorkspaceRole.ADMIN]
+    if not is_admin_or_owner:
+        project_membership = crud_project.get_project_membership(
+            db, project_id=project.id, user_id=current_user.id
+        )
+        if not project_membership:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have access to this project.",
+            )
+
+    return crud_report.get_project_dashboard_metrics(db, project=project)
