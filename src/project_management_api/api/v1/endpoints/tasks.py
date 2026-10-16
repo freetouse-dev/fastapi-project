@@ -14,6 +14,7 @@ from project_management_api.models.task import TaskPriority, TaskStatus
 from project_management_api.models.user import User
 from project_management_api.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
 from project_management_api.schemas.activity import TaskActivityResponse
+from project_management_api.schemas.common import PaginatedResponse
 from project_management_api.schemas.task import TaskCreate, TaskResponse, TaskUpdate
 
 router = APIRouter()
@@ -96,23 +97,34 @@ def create_task(
 
 @router.get(
     "/{slug}/projects/{key}/tasks/",
-    response_model=list[TaskResponse],
-    summary="List and filter tasks",
+    response_model=PaginatedResponse[TaskResponse],
+    summary="List, search, filter, and paginate tasks",
 )
 def list_tasks(
+    search: str | None = Query(None, description="Search term matching title or description"),
     status: TaskStatus | None = Query(None, description="Filter by status"),
     priority: TaskPriority | None = Query(None, description="Filter by priority"),
+    sort_by: str = Query("task_number", description="Field to sort by (task_number, title, status, priority, created_at, due_date)"),
+    sort_order: str = Query("asc", description="Sort direction ('asc' or 'desc')"),
+    page: int = Query(1, ge=1, description="Page number"),
+    size: int = Query(20, ge=1, le=100, description="Items per page (max 100)"),
     context: tuple[Workspace, WorkspaceMember, Project] = Depends(require_project_context),
     db: Session = Depends(get_db),
 ):
-    """Returns all tasks in the project with optional status and priority filtering."""
+    """Returns a paginated list of tasks matching search, filter, and sort criteria."""
     _, _, project = context
-    return crud_task.get_tasks_for_project(
+    items, total = crud_task.get_tasks_paginated(
         db,
         project_id=project.id,
+        search=search,
         status=status,
         priority=priority,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        page=page,
+        size=size,
     )
+    return PaginatedResponse.create(items=items, total=total, page=page, size=size)
 
 
 @router.get(
