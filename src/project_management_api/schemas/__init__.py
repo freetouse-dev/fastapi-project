@@ -5,6 +5,7 @@ from project_management_api.schemas.comment import (
     CommentResponse,
     CommentUpdate,
 )
+from project_management_api.schemas.common import PaginatedResponse
 from project_management_api.schemas.project import (
     ProjectBase,
     ProjectCreate,
@@ -53,4 +54,5 @@ __all__ = [
     "CommentUpdate",
     "CommentResponse",
     "TaskActivityResponse",
+    "PaginatedResponse",
 ]

@@ -1,4 +1,4 @@
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from project_management_api.models.activity import ActivityAction, TaskActivity
@@ -38,7 +38,6 @@ def create_task(
     db.add(db_task)
     db.flush()
 
-    # Log task creation activity
     activity = TaskActivity(
         task_id=db_task.id,
         actor_id=creator_id,
@@ -61,16 +60,34 @@ def get_task_by_number(db: Session, project_id: int, task_number: int) -> Task |
     )
 
 
-def get_tasks_for_project(
+def get_tasks_paginated(
     db: Session,
     project_id: int,
+    search: str | None = None,
     status: TaskStatus | None = None,
     priority: TaskPriority | None = None,
     assignee_id: int | None = None,
-) -> list[Task]:
-    """Filters tasks within a project with optional status, priority, and assignee parameters."""
+    sort_by: str = "task_number",
+    sort_order: str = "asc",
+    page: int = 1,
+    size: int = 20,
+) -> tuple[list[Task], int]:
+    """
+    Retrieves a paginated, filtered, and sorted list of tasks along with the total matching count.
+    """
     query = db.query(Task).filter(Task.project_id == project_id)
 
+    # 1. Text Search across title and description
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                Task.title.ilike(search_pattern),
+                Task.description.ilike(search_pattern),
+            )
+        )
+
+    # 2. Filtering
     if status:
         query = query.filter(Task.status == status)
     if priority:
@@ -78,7 +95,29 @@ def get_tasks_for_project(
     if assignee_id:
         query = query.filter(Task.assignee_id == assignee_id)
 
-    return query.order_by(Task.task_number.asc()).all()
+    # 3. Total Count (before pagination offset/limit)
+    total = query.count()
+
+    # 4. Sorting
+    sort_columns = {
+        "task_number": Task.task_number,
+        "title": Task.title,
+        "status": Task.status,
+        "priority": Task.priority,
+        "created_at": Task.created_at,
+        "due_date": Task.due_date,
+    }
+    sort_column = sort_columns.get(sort_by, Task.task_number)
+    if sort_order.lower() == "desc":
+        query = query.order_by(sort_column.desc())
+    else:
+        query = query.order_by(sort_column.asc())
+
+    # 5. Pagination
+    offset = (page - 1) * size
+    items = query.offset(offset).limit(size).all()
+
+    return items, total
 
 
 def update_task(
@@ -91,7 +130,6 @@ def update_task(
     """Updates task fields and automatically logs audit activities for changed attributes."""
     update_data = task_in.model_dump(exclude_unset=True, exclude={"assignee_email"})
 
-    # Track status change
     if "status" in update_data and update_data["status"] != db_task.status:
         db.add(
             TaskActivity(
@@ -104,7 +142,6 @@ def update_task(
             )
         )
 
-    # Track priority change
     if "priority" in update_data and update_data["priority"] != db_task.priority:
         db.add(
             TaskActivity(
@@ -117,7 +154,6 @@ def update_task(
             )
         )
 
-    # Track title change
     if "title" in update_data and update_data["title"] != db_task.title:
         db.add(
             TaskActivity(
@@ -130,7 +166,6 @@ def update_task(
             )
         )
 
-    # Track assignee change
     if "assignee_email" in task_in.model_fields_set and assignee_id != db_task.assignee_id:
         db.add(
             TaskActivity(
@@ -144,7 +179,6 @@ def update_task(
         )
         db_task.assignee_id = assignee_id
 
-    # Apply all other field updates
     for field, value in update_data.items():
         setattr(db_task, field, value)
 
