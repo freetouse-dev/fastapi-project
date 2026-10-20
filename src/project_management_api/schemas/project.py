@@ -31,6 +31,8 @@ class ProjectResponse(ProjectBase):
     key: str
     status: ProjectStatus
     created_by_id: int
+    deleted_at: datetime | None = None
+    deleted_by_id: int | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -39,6 +41,9 @@ class ProjectResponse(ProjectBase):
 class ProjectMemberAdd(BaseModel):
     email: str
     role: ProjectRole = ProjectRole.CONTRIBUTOR
+
+class ProjectMemberUpdate(BaseModel):
+    role: ProjectRole
 
 class ProjectMemberResponse(BaseModel):
     id: int

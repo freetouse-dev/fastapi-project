@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 from project_management_api.api.v1.endpoints import (
+    admin,
+    attachments,
     auth,
     comments,
     health,
@@ -18,3 +20,5 @@ api_router.include_router(workspaces.router, prefix="/workspaces", tags=["Worksp
 api_router.include_router(projects.router, prefix="/workspaces", tags=["Projects"])
 api_router.include_router(tasks.router, prefix="/workspaces", tags=["Tasks"])
 api_router.include_router(comments.router, prefix="/workspaces", tags=["Comments"])
+api_router.include_router(attachments.router, prefix="/attachments", tags=["Attachments"])
+api_router.include_router(admin.router, prefix="/admin", tags=["Admin"])

@@ -35,6 +35,17 @@ class Project(Base):
         Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
 
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        index=True,
+    )
+    deleted_by_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -49,6 +60,7 @@ class Project(Base):
 
     workspace = relationship("Workspace")
     creator = relationship("User", foreign_keys=[created_by_id])
+    deleted_by = relationship("User", foreign_keys=[deleted_by_id])
     members = relationship("ProjectMember", back_populates="project", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:

@@ -1,4 +1,6 @@
 from project_management_api.models.activity import ActivityAction, TaskActivity
+from project_management_api.models.attachment import CommentAttachment
+from project_management_api.models.audit import AuditLog
 from project_management_api.models.comment import TaskComment
 from project_management_api.models.otp import OTPPurpose, UserOTP
 from project_management_api.models.project import Project, ProjectMember, ProjectRole, ProjectStatus
@@ -19,8 +21,10 @@ __all__ = [
     "TaskPriority",
     "TaskStatus",
     "TaskComment",
+    "CommentAttachment",
     "TaskActivity",
     "ActivityAction",
     "UserOTP",
     "OTPPurpose",
+    "AuditLog",
 ]

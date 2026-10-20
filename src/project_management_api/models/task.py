@@ -49,6 +49,17 @@ class Task(Base):
 
     due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        index=True,
+    )
+    deleted_by_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -64,6 +75,7 @@ class Task(Base):
     project = relationship("Project")
     creator = relationship("User", foreign_keys=[creator_id])
     assignee = relationship("User", foreign_keys=[assignee_id])
+    deleted_by = relationship("User", foreign_keys=[deleted_by_id])
 
     @property
     def ticket_key(self) -> str:

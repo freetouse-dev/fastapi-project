@@ -26,6 +26,8 @@ class WorkspaceResponse(WorkspaceBase):
     id: int
     slug: str
     owner_id: int
+    deleted_at: datetime | None = None
+    deleted_by_id: int | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -34,6 +36,9 @@ class WorkspaceResponse(WorkspaceBase):
 class WorkspaceMemberAdd(BaseModel):
     email: EmailStr
     role: WorkspaceRole = WorkspaceRole.MEMBER
+
+class WorkspaceMemberUpdate(BaseModel):
+    role: WorkspaceRole
 
 class WorkspaceMemberResponse(BaseModel):
     id: int

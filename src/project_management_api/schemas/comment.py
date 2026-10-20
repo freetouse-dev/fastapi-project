@@ -1,5 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
+from project_management_api.schemas.attachment import CommentAttachmentResponse
 from project_management_api.schemas.user import UserResponse
 
 class CommentBase(BaseModel):
@@ -15,8 +16,11 @@ class CommentResponse(CommentBase):
     id: int
     task_id: int
     author_id: int
+    deleted_at: datetime | None = None
+    deleted_by_id: int | None = None
     created_at: datetime
     updated_at: datetime
     author: UserResponse
+    attachments: list[CommentAttachmentResponse] = []
 
     model_config = ConfigDict(from_attributes=True)

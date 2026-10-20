@@ -9,6 +9,7 @@ class WorkspaceRole(str, enum.Enum):
     OWNER = "OWNER"
     ADMIN = "ADMIN"
     MEMBER = "MEMBER"
+    VIEWER = "VIEWER"
 
 class Workspace(Base):
     __tablename__ = "workspaces"
@@ -18,6 +19,17 @@ class Workspace(Base):
     slug: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     owner_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        index=True,
+    )
+    deleted_by_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -32,6 +44,7 @@ class Workspace(Base):
     )
 
     owner = relationship("User", foreign_keys=[owner_id])
+    deleted_by = relationship("User", foreign_keys=[deleted_by_id])
     members = relationship("WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:

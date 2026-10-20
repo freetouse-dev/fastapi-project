@@ -12,12 +12,17 @@ def get_project_dashboard_metrics(db: Session, project: Project) -> ProjectDashb
     now = datetime.now(timezone.utc)
 
     # 1. Total tasks
-    total_tasks = db.query(func.count(Task.id)).filter(Task.project_id == project.id).scalar() or 0
+    total_tasks = (
+        db.query(func.count(Task.id))
+        .filter(Task.project_id == project.id, Task.deleted_at.is_(None))
+        .scalar()
+        or 0
+    )
 
     # 2. Status distribution
     status_counts = (
         db.query(Task.status, func.count(Task.id))
-        .filter(Task.project_id == project.id)
+        .filter(Task.project_id == project.id, Task.deleted_at.is_(None))
         .group_by(Task.status)
         .all()
     )
@@ -28,7 +33,7 @@ def get_project_dashboard_metrics(db: Session, project: Project) -> ProjectDashb
     # 3. Priority distribution
     priority_counts = (
         db.query(Task.priority, func.count(Task.id))
-        .filter(Task.project_id == project.id)
+        .filter(Task.project_id == project.id, Task.deleted_at.is_(None))
         .group_by(Task.priority)
         .all()
     )
@@ -47,6 +52,7 @@ def get_project_dashboard_metrics(db: Session, project: Project) -> ProjectDashb
         db.query(func.count(Task.id))
         .filter(
             Task.project_id == project.id,
+            Task.deleted_at.is_(None),
             Task.due_date.isnot(None),
             Task.due_date < now,
             Task.status.notin_([TaskStatus.DONE, TaskStatus.CANCELLED]),

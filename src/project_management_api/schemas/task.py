@@ -29,6 +29,8 @@ class TaskResponse(TaskBase):
     ticket_key: str
     creator_id: int
     assignee_id: int | None
+    deleted_at: datetime | None = None
+    deleted_by_id: int | None = None
     created_at: datetime
     updated_at: datetime
     creator: UserResponse

@@ -36,7 +36,7 @@ def require_project_context(
             detail="Project not found.",
         )
 
-    is_admin_or_owner = ws_membership.role in [WorkspaceRole.OWNER, WorkspaceRole.ADMIN]
+    is_admin_or_owner = current_user.is_superuser or ws_membership.role in [WorkspaceRole.OWNER, WorkspaceRole.ADMIN]
     if not is_admin_or_owner:
         proj_membership = crud_project.get_project_membership(db, project.id, current_user.id)
         if not proj_membership:
@@ -63,9 +63,9 @@ def create_task(
     """Creates a new task in the project with auto-incremented ticket numbering (e.g. MOB-1)."""
     workspace, ws_membership, project = context
 
-    is_admin_or_owner = ws_membership.role in [WorkspaceRole.OWNER, WorkspaceRole.ADMIN]
+    is_admin_or_owner = current_user.is_superuser or ws_membership.role in [WorkspaceRole.OWNER, WorkspaceRole.ADMIN]
     proj_membership = crud_project.get_project_membership(db, project.id, current_user.id)
-    if not is_admin_or_owner and (not proj_membership or proj_membership.role == ProjectRole.VIEWER):
+    if not is_admin_or_owner and (not proj_membership or proj_membership.role == ProjectRole.VIEWER or ws_membership.role == WorkspaceRole.VIEWER):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Viewers cannot create tasks in this project.",
@@ -111,7 +111,7 @@ def list_tasks(
     context: tuple[Workspace, WorkspaceMember, Project] = Depends(require_project_context),
     db: Session = Depends(get_db),
 ):
-    """Returns a paginated list of tasks matching search, filter, and sort criteria."""
+    """Returns a paginated list of active tasks matching search, filter, and sort criteria."""
     _, _, project = context
     items, total = crud_task.get_tasks_paginated(
         db,
@@ -163,9 +163,9 @@ def update_task(
     """Updates task status, priority, description, or reassigned user."""
     workspace, ws_membership, project = context
 
-    is_admin_or_owner = ws_membership.role in [WorkspaceRole.OWNER, WorkspaceRole.ADMIN]
+    is_admin_or_owner = current_user.is_superuser or ws_membership.role in [WorkspaceRole.OWNER, WorkspaceRole.ADMIN]
     proj_membership = crud_project.get_project_membership(db, project.id, current_user.id)
-    if not is_admin_or_owner and (not proj_membership or proj_membership.role == ProjectRole.VIEWER):
+    if not is_admin_or_owner and (not proj_membership or proj_membership.role == ProjectRole.VIEWER or ws_membership.role == WorkspaceRole.VIEWER):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Viewers cannot update tasks in this project.",
@@ -200,6 +200,41 @@ def update_task(
         actor_id=current_user.id,
         assignee_id=assignee_id,
     )
+
+
+@router.delete(
+    "/{slug}/projects/{key}/tasks/{task_number}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Soft-delete task",
+)
+def delete_task(
+    task_number: int,
+    context: tuple[Workspace, WorkspaceMember, Project] = Depends(require_project_context),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Soft-deletes task and cascades to comments."""
+    workspace, ws_membership, project = context
+
+    task = crud_task.get_task_by_number(db, project_id=project.id, task_number=task_number)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Task {project.key}-{task_number} not found.",
+        )
+
+    is_admin_or_owner = current_user.is_superuser or ws_membership.role in [WorkspaceRole.OWNER, WorkspaceRole.ADMIN]
+    proj_membership = crud_project.get_project_membership(db, project.id, current_user.id)
+    is_lead = proj_membership and proj_membership.role == ProjectRole.PROJECT_LEAD
+    is_creator = task.creator_id == current_user.id
+
+    if not (is_admin_or_owner or is_lead or is_creator):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete this task.",
+        )
+
+    crud_task.soft_delete_task(db, db_task=task, actor_id=current_user.id)
 
 
 @router.get(

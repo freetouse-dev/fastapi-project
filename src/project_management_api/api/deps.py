@@ -14,6 +14,7 @@ from project_management_api.schemas.token import TokenPayload
 settings = get_settings()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 def get_current_user(
     db: Session = Depends(get_db),
@@ -50,3 +51,19 @@ def get_current_user(
         )
 
     return user
+
+
+def get_current_user_from_token_or_param(
+    db: Session = Depends(get_db),
+    header_token: str | None = Depends(oauth2_scheme_optional),
+    param_token: str | None = None,
+) -> User:
+    """Authenticates user either from Authorization Bearer header or query param token (useful for file preview/downloads)."""
+    token = header_token or param_token
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return get_current_user(db=db, token=token)

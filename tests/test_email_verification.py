@@ -34,9 +34,10 @@ def test_email_verification_complete_flow(client, db_session):
 
     # 4. Extract plain OTP from database candidate match for testing
     plain_otp = None
-    for candidate in range(100000, 1000000):
-        if verify_otp(str(candidate), otp_record.hashed_otp):
-            plain_otp = str(candidate)
+    for candidate in range(0, 1000000):
+        cand_str = f"{candidate:06d}"
+        if verify_otp(cand_str, otp_record.hashed_otp):
+            plain_otp = cand_str
             break
     assert plain_otp is not None
 
