@@ -4,26 +4,7 @@ from project_management_api.models.user import User
 from project_management_api.models.workspace import WorkspaceRole
 
 
-def create_verified_user(db_session, email: str, full_name: str, is_superuser: bool = False) -> User:
-    from project_management_api.core.security import hash_password
-    user = User(
-        email=email,
-        full_name=full_name,
-        hashed_password=hash_password("password123"),
-        is_active=True,
-        is_verified=True,
-        is_superuser=is_superuser,
-    )
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
-    return user
-
-
-def get_token(client, email: str, password: str = "password123") -> str:
-    res = client.post("/api/v1/auth/login", data={"username": email, "password": password})
-    assert res.status_code == 200
-    return res.json()["access_token"]
+from tests.conftest import create_verified_user, get_token
 
 
 def test_workspace_rbac_and_owner_protection(client, db_session):

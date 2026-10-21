@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from project_management_api.crud.audit import create_audit_log
 from project_management_api.models.comment import TaskComment
+from project_management_api.models.task import Task
 from project_management_api.schemas.comment import CommentCreate, CommentUpdate
 
 
@@ -99,6 +100,33 @@ def soft_delete_comment(db: Session, db_comment: TaskComment, actor_id: int) -> 
     create_audit_log(
         db,
         action="COMMENT_DELETED",
+        resource_type="COMMENT",
+        resource_id=db_comment.id,
+        actor_id=actor_id,
+        details={"task_id": db_comment.task_id},
+    )
+
+    db.commit()
+    db.refresh(db_comment)
+    return db_comment
+
+
+def restore_comment(db: Session, db_comment: TaskComment, actor_id: int) -> TaskComment:
+    """Restores a soft-deleted comment and records an audit log."""
+    if db_comment.deleted_at is None:
+        return db_comment
+
+    # Verify parent task is active
+    task = db.query(Task).filter(Task.id == db_comment.task_id).first()
+    if task and task.deleted_at is not None:
+        raise ValueError("Cannot restore comment because its parent task is deleted. Restore the task first.")
+
+    db_comment.deleted_at = None
+    db_comment.deleted_by_id = None
+
+    create_audit_log(
+        db,
+        action="COMMENT_RESTORED",
         resource_type="COMMENT",
         resource_id=db_comment.id,
         actor_id=actor_id,

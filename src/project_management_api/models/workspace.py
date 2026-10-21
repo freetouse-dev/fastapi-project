@@ -18,6 +18,9 @@ class Workspace(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     slug: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    company_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     owner_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
     deleted_at: Mapped[datetime | None] = mapped_column(
@@ -44,6 +47,7 @@ class Workspace(Base):
     )
 
     owner = relationship("User", foreign_keys=[owner_id])
+    company = relationship("Company", back_populates="workspaces")
     deleted_by = relationship("User", foreign_keys=[deleted_by_id])
     members = relationship("WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan")
 
@@ -77,3 +81,70 @@ class WorkspaceMember(Base):
 
     def __repr__(self) -> str:
         return f"<WorkspaceMember workspace_id={self.workspace_id} user_id={self.user_id} role={self.role}>"
+
+
+class WorkspaceAccessRequestType(str, enum.Enum):
+    CREATE_WORKSPACE = "CREATE_WORKSPACE"
+    JOIN_WORKSPACE = "JOIN_WORKSPACE"
+
+
+class WorkspaceAccessRequestStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    CANCELLED = "CANCELLED"
+
+
+class WorkspaceAccessRequest(Base):
+    __tablename__ = "workspace_access_requests"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    company_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    request_type: Mapped[WorkspaceAccessRequestType] = mapped_column(
+        Enum(WorkspaceAccessRequestType),
+        default=WorkspaceAccessRequestType.CREATE_WORKSPACE,
+        nullable=False,
+    )
+    workspace_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    requested_role: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    status: Mapped[WorkspaceAccessRequestStatus] = mapped_column(
+        Enum(WorkspaceAccessRequestStatus),
+        default=WorkspaceAccessRequestStatus.PENDING,
+        nullable=False,
+        index=True,
+    )
+    reviewer_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    decision_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    company = relationship("Company")
+    user = relationship("User", foreign_keys=[user_id])
+    workspace = relationship("Workspace", foreign_keys=[workspace_id])
+    reviewer = relationship("User", foreign_keys=[reviewer_id])
+
+    def __repr__(self) -> str:
+        return f"<WorkspaceAccessRequest id={self.id} type={self.request_type} status={self.status}>"

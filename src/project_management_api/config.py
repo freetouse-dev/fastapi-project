@@ -2,9 +2,9 @@ from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    app_name: str = "Project Management API"
+    app_name: str = "Unitask"
     app_version: str = "0.1.0"
-    app_description: str = "A collaborative project management REST API built with FastAPI."
+    app_description: str = "Unitask - A modern collaborative multi-tenant project management platform."
     environment: str = "development"
     debug: bool = True
 
@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     smtp_password: str = "rwpr xkch skvl bvad"
     smtp_tls: bool = True
     emails_from_email: str = "gingergin348@gmail.com"
-    emails_from_name: str = "Project Management API"
+    emails_from_name: str = "Unitask"
     otp_expire_minutes: int = 10
     otp_max_attempts: int = 5
     password_reset_token_expire_minutes: int = 15

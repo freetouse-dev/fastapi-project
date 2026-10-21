@@ -4,9 +4,11 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from project_management_api.api.deps import get_current_user
+from project_management_api.crud import user as crud_user
 from project_management_api.crud.audit import create_audit_log
 from project_management_api.db.session import get_db
 from project_management_api.models.user import User
+from project_management_api.schemas.dashboard import UserDashboardResponse
 from project_management_api.schemas.user import UserResponse
 from project_management_api.services.storage import StorageService
 
@@ -20,6 +22,19 @@ router = APIRouter()
 def read_current_user(current_user: User = Depends(get_current_user)):
     """Fetches the profile details of the currently authenticated user."""
     return current_user
+
+
+@router.get(
+    "/me/dashboard",
+    response_model=UserDashboardResponse,
+    summary="Get User Personal Dashboard Overview",
+)
+def get_user_dashboard(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Fetches personal metrics, assigned tasks, and workspace summaries for the User Dashboard."""
+    return crud_user.get_user_dashboard_data(db, user=current_user)
 
 
 @router.put(

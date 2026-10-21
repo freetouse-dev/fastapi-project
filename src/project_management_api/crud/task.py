@@ -283,3 +283,30 @@ def soft_delete_task(db: Session, db_task: Task, actor_id: int) -> Task:
     db.commit()
     db.refresh(db_task)
     return db_task
+
+
+def restore_task(db: Session, db_task: Task, actor_id: int) -> Task:
+    """Restores a soft-deleted task and records an audit log."""
+    if db_task.deleted_at is None:
+        return db_task
+
+    # Verify parent project is active
+    project = db.query(Project).filter(Project.id == db_task.project_id).first()
+    if project and project.deleted_at is not None:
+        raise ValueError("Cannot restore task because its parent project is deleted. Restore the project first.")
+
+    db_task.deleted_at = None
+    db_task.deleted_by_id = None
+
+    create_audit_log(
+        db,
+        action="TASK_RESTORED",
+        resource_type="TASK",
+        resource_id=db_task.id,
+        actor_id=actor_id,
+        details={"ticket_key": db_task.ticket_key, "title": db_task.title},
+    )
+
+    db.commit()
+    db.refresh(db_task)
+    return db_task

@@ -1,11 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from project_management_api.api.deps import get_current_user
-from project_management_api.core.permissions import can_manage_workspace, can_manage_workspace_members
+from project_management_api.api.deps import (
+    get_current_active_company,
+    get_current_user,
+    get_optional_active_company,
+)
+from project_management_api.core.permissions import (
+    can_create_workspace,
+    can_manage_workspace,
+    can_manage_workspace_members,
+)
+from project_management_api.crud import company as crud_company
 from project_management_api.crud import user as crud_user
 from project_management_api.crud import workspace as crud_workspace
 from project_management_api.db.session import get_db
+from project_management_api.models.company import Company, CompanyMember, CompanyRole, CompanyStatus
 from project_management_api.models.user import User
 from project_management_api.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
 from project_management_api.schemas.workspace import (
@@ -24,11 +34,11 @@ def require_workspace_membership(
     slug: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    company_context: tuple[Company | None, CompanyMember | None] = Depends(get_optional_active_company),
 ) -> tuple[Workspace, WorkspaceMember]:
     """
-    Validates that active workspace exists and the user is an active member or superuser.
-    Returns (workspace, membership). If user is superuser but not an explicit member,
-    synthesizes a virtual owner membership.
+    Validates that active workspace exists and the user is an active member or superuser/company admin.
+    Also validates that the workspace belongs to the active company if company context is passed.
     """
     workspace = crud_workspace.get_workspace_by_slug(db, slug=slug)
     if not workspace:
@@ -36,6 +46,14 @@ def require_workspace_membership(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Workspace not found.",
         )
+
+    active_company, company_membership = company_context
+    if active_company is not None and workspace.company_id is not None:
+        if workspace.company_id != active_company.id and not current_user.is_superuser:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Workspace does not belong to the selected company.",
+            )
 
     membership = crud_workspace.get_workspace_membership(
         db, workspace_id=workspace.id, user_id=current_user.id
@@ -48,6 +66,19 @@ def require_workspace_membership(
                 workspace_id=workspace.id,
                 user_id=current_user.id,
                 role=WorkspaceRole.OWNER,
+            )
+            return workspace, virtual_membership
+
+        if (
+            company_membership
+            and workspace.company_id == company_membership.company_id
+            and company_membership.role in [CompanyRole.COMPANY_OWNER, CompanyRole.COMPANY_ADMIN]
+        ):
+            # Company Owner / Admin gets synthesized OWNER / ADMIN privileges
+            virtual_membership = WorkspaceMember(
+                workspace_id=workspace.id,
+                user_id=current_user.id,
+                role=WorkspaceRole.OWNER if company_membership.role == CompanyRole.COMPANY_OWNER else WorkspaceRole.ADMIN,
             )
             return workspace, virtual_membership
 
@@ -69,8 +100,19 @@ def create_new_workspace(
     workspace_in: WorkspaceCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    company_context: tuple[Company, CompanyMember | None] = Depends(get_current_active_company),
 ):
-    """Creates a workspace and automatically assigns current_user as OWNER."""
+    """
+    Creates a workspace in the active company.
+    Requires caller to be COMPANY_OWNER, COMPANY_ADMIN, or platform superuser.
+    """
+    company, membership = company_context
+    if not can_create_workspace(membership, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only company owners and administrators can create workspaces.",
+        )
+
     if workspace_in.slug:
         existing = crud_workspace.get_workspace_by_slug(db, slug=workspace_in.slug, include_deleted=True)
         if existing:
@@ -80,7 +122,10 @@ def create_new_workspace(
             )
 
     return crud_workspace.create_workspace(
-        db, workspace_in=workspace_in, owner_id=current_user.id
+        db,
+        workspace_in=workspace_in,
+        owner_id=current_user.id,
+        company_id=company.id,
     )
 
 
@@ -92,8 +137,19 @@ def create_new_workspace(
 def list_my_workspaces(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    company_context: tuple[Company | None, CompanyMember | None] = Depends(get_optional_active_company),
 ):
-    """Returns all active workspaces the current user is a member of (or all if superuser)."""
+    """
+    Returns active workspaces for current user, scoped to active company if selected.
+    If company is selected and user is COMPANY_OWNER / COMPANY_ADMIN or superuser,
+    returns all active workspaces of that company.
+    """
+    company, membership = company_context
+    if company:
+        if current_user.is_superuser or (membership and membership.role in [CompanyRole.COMPANY_OWNER, CompanyRole.COMPANY_ADMIN]):
+            return crud_workspace.get_workspaces_for_company(db, company_id=company.id, include_deleted=False)
+        return crud_workspace.get_workspaces_for_user(db, user_id=current_user.id, company_id=company.id)
+
     if current_user.is_superuser:
         return crud_workspace.get_all_workspaces(db, include_deleted=False)
     return crud_workspace.get_workspaces_for_user(db, user_id=current_user.id)

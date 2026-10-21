@@ -1,24 +1,9 @@
-from project_management_api.models.user import User
-
-
-def get_auth_token(client, db_session, email: str, password: str = "password123") -> str:
-    client.post(
-        "/api/v1/auth/register",
-        json={"email": email, "full_name": "Workspace User", "password": password},
-    )
-    user = db_session.query(User).filter(User.email == email).first()
-    user.is_verified = True
-    db_session.commit()
-
-    res = client.post(
-        "/api/v1/auth/login",
-        data={"username": email, "password": password},
-    )
-    return res.json()["access_token"]
+from tests.conftest import create_verified_user, get_token
 
 
 def test_create_and_access_workspace(client, db_session):
-    token = get_auth_token(client, db_session, "workspaceowner@example.com")
+    owner = create_verified_user(db_session, "workspaceowner@example.com", "Workspace Owner", with_company=True)
+    token = get_token(client, owner.email)
     headers = {"Authorization": f"Bearer {token}"}
 
     # 1. Create workspace
@@ -40,7 +25,8 @@ def test_create_and_access_workspace(client, db_session):
     assert workspaces[0]["slug"] == "testing-workspace"
 
     # 3. Unauthorized outsider cannot view workspace
-    outsider_token = get_auth_token(client, db_session, "outsider@example.com")
+    outsider = create_verified_user(db_session, "outsider@example.com", "Outsider", with_company=True)
+    outsider_token = get_token(client, outsider.email)
     outsider_headers = {"Authorization": f"Bearer {outsider_token}"}
     forbidden_res = client.get("/api/v1/workspaces/testing-workspace", headers=outsider_headers)
     assert forbidden_res.status_code == 403

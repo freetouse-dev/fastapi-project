@@ -176,6 +176,33 @@ def soft_delete_project(db: Session, db_project: Project, actor_id: int) -> Proj
     return db_project
 
 
+def restore_project(db: Session, db_project: Project, actor_id: int) -> Project:
+    """Restores a soft-deleted project and records an audit log."""
+    if db_project.deleted_at is None:
+        return db_project
+
+    # Ensure parent workspace is active
+    workspace = db.query(Workspace).filter(Workspace.id == db_project.workspace_id).first()
+    if workspace and workspace.deleted_at is not None:
+        raise ValueError("Cannot restore project because its parent workspace is deleted. Restore the workspace first.")
+
+    db_project.deleted_at = None
+    db_project.deleted_by_id = None
+
+    create_audit_log(
+        db,
+        action="PROJECT_RESTORED",
+        resource_type="PROJECT",
+        resource_id=db_project.id,
+        actor_id=actor_id,
+        details={"name": db_project.name, "key": db_project.key},
+    )
+
+    db.commit()
+    db.refresh(db_project)
+    return db_project
+
+
 def get_project_membership(db: Session, project_id: int, user_id: int) -> ProjectMember | None:
     """Checks whether a user is an active member of the project."""
     return (

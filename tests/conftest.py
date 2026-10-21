@@ -57,8 +57,15 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
     app.dependency_overrides.clear()
 
 
-def create_verified_user(db_session: Session, email: str, full_name: str, is_superuser: bool = False):
+def create_verified_user(
+    db_session: Session,
+    email: str,
+    full_name: str,
+    is_superuser: bool = False,
+    with_company: bool = True,
+):
     from project_management_api.core.security import hash_password
+    from project_management_api.crud import company as crud_company
     from project_management_api.models.user import User
 
     user = User(
@@ -72,6 +79,16 @@ def create_verified_user(db_session: Session, email: str, full_name: str, is_sup
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
+
+    if with_company:
+        clean_slug = email.split("@")[0].replace(".", "-")
+        crud_company.create_company(
+            db_session,
+            name=f"{full_name} Co",
+            slug=f"co-{clean_slug}",
+            owner_id=user.id,
+        )
+
     return user
 
 

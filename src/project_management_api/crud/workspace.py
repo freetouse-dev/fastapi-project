@@ -27,7 +27,12 @@ def generate_unique_slug(db: Session, base_name: str) -> str:
     return slug
 
 
-def create_workspace(db: Session, workspace_in: WorkspaceCreate, owner_id: int) -> Workspace:
+def create_workspace(
+    db: Session,
+    workspace_in: WorkspaceCreate,
+    owner_id: int,
+    company_id: int | None = None,
+) -> Workspace:
     """Creates a workspace and automatically assigns the creator as OWNER."""
     slug = workspace_in.slug if workspace_in.slug else generate_unique_slug(db, workspace_in.name)
 
@@ -36,6 +41,7 @@ def create_workspace(db: Session, workspace_in: WorkspaceCreate, owner_id: int) 
         slug=slug,
         description=workspace_in.description,
         owner_id=owner_id,
+        company_id=company_id,
     )
     db.add(db_workspace)
     db.flush()
@@ -53,7 +59,7 @@ def create_workspace(db: Session, workspace_in: WorkspaceCreate, owner_id: int) 
         resource_type="WORKSPACE",
         resource_id=db_workspace.id,
         actor_id=owner_id,
-        details={"name": db_workspace.name, "slug": db_workspace.slug},
+        details={"name": db_workspace.name, "slug": db_workspace.slug, "company_id": company_id},
     )
 
     db.commit()
@@ -61,17 +67,27 @@ def create_workspace(db: Session, workspace_in: WorkspaceCreate, owner_id: int) 
     return db_workspace
 
 
-def get_workspaces_for_user(db: Session, user_id: int) -> list[Workspace]:
-    """Returns all active workspaces where the given user is a member."""
-    return (
+def get_workspaces_for_user(db: Session, user_id: int, company_id: int | None = None) -> list[Workspace]:
+    """Returns all active workspaces where the given user is a member, optionally scoped to company."""
+    query = (
         db.query(Workspace)
         .join(WorkspaceMember, Workspace.id == WorkspaceMember.workspace_id)
         .filter(
             WorkspaceMember.user_id == user_id,
             Workspace.deleted_at.is_(None),
         )
-        .all()
     )
+    if company_id is not None:
+        query = query.filter(Workspace.company_id == company_id)
+    return query.all()
+
+
+def get_workspaces_for_company(db: Session, company_id: int, include_deleted: bool = False) -> list[Workspace]:
+    """Returns all workspaces belonging to a company."""
+    query = db.query(Workspace).filter(Workspace.company_id == company_id)
+    if not include_deleted:
+        query = query.filter(Workspace.deleted_at.is_(None))
+    return query.order_by(Workspace.created_at.desc()).all()
 
 
 def get_all_workspaces(db: Session, include_deleted: bool = False) -> list[Workspace]:
@@ -172,6 +188,28 @@ def soft_delete_workspace(db: Session, db_workspace: Workspace, actor_id: int) -
         resource_id=db_workspace.id,
         actor_id=actor_id,
         details={"name": db_workspace.name, "slug": db_workspace.slug, "projects_count": len(projects)},
+    )
+
+    db.commit()
+    db.refresh(db_workspace)
+    return db_workspace
+
+
+def restore_workspace(db: Session, db_workspace: Workspace, actor_id: int) -> Workspace:
+    """Restores a soft-deleted workspace and records an audit log."""
+    if db_workspace.deleted_at is None:
+        return db_workspace
+
+    db_workspace.deleted_at = None
+    db_workspace.deleted_by_id = None
+
+    create_audit_log(
+        db,
+        action="WORKSPACE_RESTORED",
+        resource_type="WORKSPACE",
+        resource_id=db_workspace.id,
+        actor_id=actor_id,
+        details={"name": db_workspace.name, "slug": db_workspace.slug},
     )
 
     db.commit()

@@ -26,6 +26,7 @@ class WorkspaceResponse(WorkspaceBase):
     id: int
     slug: str
     owner_id: int
+    company_id: int | None = None
     deleted_at: datetime | None = None
     deleted_by_id: int | None = None
     created_at: datetime

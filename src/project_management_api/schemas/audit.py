@@ -21,6 +21,8 @@ class AdminStatsResponse(BaseModel):
     total_users: int
     active_users: int
     unverified_users: int
+    total_companies: int = 0
+    pending_company_requests: int = 0
     total_workspaces: int
     total_projects: int
     total_tasks: int
