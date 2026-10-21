@@ -440,6 +440,20 @@ def admin_manage_workspace_member(
         return crud_workspace.update_member_role(
             db, membership=membership, new_role=member_in.role, actor_id=current_user.id
         )
+
+    if ws.company_id:
+        co_member = crud_company.get_company_member(
+            db, company_id=ws.company_id, user_id=target_user.id
+        )
+        if not co_member:
+            crud_company.add_company_member(
+                db,
+                company_id=ws.company_id,
+                user_id=target_user.id,
+                role=CompanyRole.MEMBER,
+                invited_by_id=current_user.id,
+            )
+
     return crud_workspace.add_workspace_member(
         db, workspace_id=workspace_id, user_id=target_user.id, role=member_in.role, actor_id=current_user.id
     )

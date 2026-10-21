@@ -23,11 +23,11 @@ def upgrade() -> None:
     # 1. Add can_create_workspace to company_members
     op.add_column(
         'company_members',
-        sa.Column('can_create_workspace', sa.Boolean(), nullable=False, server_default=sa.text('0'))
+        sa.Column('can_create_workspace', sa.Boolean(), nullable=False, server_default=sa.false())
     )
 
-    # 2. Backfill existing COMPANY_OWNER and COMPANY_ADMIN members with can_create_workspace = 1
-    op.execute(text("UPDATE company_members SET can_create_workspace = 1 WHERE role IN ('COMPANY_OWNER', 'COMPANY_ADMIN')"))
+    # 2. Backfill existing COMPANY_OWNER and COMPANY_ADMIN members with can_create_workspace = TRUE
+    op.execute(text("UPDATE company_members SET can_create_workspace = TRUE WHERE role IN ('COMPANY_OWNER', 'COMPANY_ADMIN')"))
 
     # 3. Create workspace_access_requests table
     op.create_table(

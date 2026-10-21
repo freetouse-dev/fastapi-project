@@ -183,28 +183,25 @@ ENVIRONMENT=development
 DEBUG=True
 
 # Database Configuration
+DB_TYPE=postgresql
 DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=project_management_db
+DB_PORT=5432
+DB_USER=ajay
+DB_PASSWORD="YOUR_PASSWORD"
+DB_NAME="YOUR_DATABASE_NAME"
 
 # Security & Tokens
-SECRET_KEY=generate_a_secure_random_key_here
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-OTP_EXPIRE_MINUTES=10
-OTP_MAX_ATTEMPTS=5
-PASSWORD_RESET_TOKEN_EXPIRE_MINUTES=15
+SECRET_KEY="YOUR_SECRET_KEY"
+ALGORITHM="YOUR_ALGORITHM"
+ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # SMTP / Email Configuration (Falls back to console logs in development/testing)
-SMTP_HOST=localhost
-SMTP_PORT=1025
-SMTP_USER=
-SMTP_PASSWORD=
-SMTP_TLS=False
-EMAILS_FROM_EMAIL=noreply@projectapi.com
-EMAILS_FROM_NAME="Project Management API"
+smtp_host=smtp.gmail.com
+smtp_port=587
+smtp_user="YOUR_EMAIL_ADDRESS"
+smtp_password="YOUR_EMAIL_PASSWORD"
+smtp_tls=True
+emails_from_email="YOUR_EMAIL_ADDRESS"
 ```
 
 ### Step 2: Install Dependencies with `uv`

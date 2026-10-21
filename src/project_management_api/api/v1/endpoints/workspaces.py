@@ -276,6 +276,20 @@ def add_member_to_workspace(
             detail="User is already a member of this workspace.",
         )
 
+    # If workspace belongs to a company, ensure target user is also joined as a company member
+    if workspace.company_id:
+        co_member = crud_company.get_company_member(
+            db, company_id=workspace.company_id, user_id=user_to_add.id
+        )
+        if not co_member:
+            crud_company.add_company_member(
+                db,
+                company_id=workspace.company_id,
+                user_id=user_to_add.id,
+                role=CompanyRole.MEMBER,
+                invited_by_id=current_user.id,
+            )
+
     return crud_workspace.add_workspace_member(
         db,
         workspace_id=workspace.id,
