@@ -13,3 +13,9 @@ wheels/
 .env
 .env.*
 !.env.example
+
+# User uploaded files (attachments and avatars)
+uploads/attachments/*
+!uploads/attachments/.gitkeep
+uploads/avatars/*
+!uploads/avatars/.gitkeep
